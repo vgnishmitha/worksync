@@ -58,6 +58,19 @@ app.get("/api", (req, res) => {
   });
 });
 
+// Ensure database connection before processing API routes
+app.use(async (req, res, next) => {
+  if (req.path === "/" || req.path === "/api") {
+    return next();
+  }
+  try {
+    await dbConnection();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // API routes (support both /api prefix and root mounting)
 app.use("/api", routes);
 app.use("/", routes);
@@ -66,11 +79,11 @@ app.use("/", routes);
 app.use(routeNotFound);
 app.use(errorHandler);
 
-// Connect to MongoDB
-dbConnection();
-
 // Start a local server outside Vercel
 if (!process.env.VERCEL) {
+  dbConnection().catch((err) =>
+    console.error("Initial DB connection failed:", err.message)
+  );
   app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
   });
