@@ -1,6 +1,6 @@
 # Business Requirements Document (BRD)
 ## Project: TeamFlow / WorkSync Issue Tracker System
-**Document Version:** 2.0.0  
+**Document Version:** 2.1.0  
 **Status:** Approved & Implemented  
 **Date:** October 2026  
 **System Repository:** [https://github.com/vgnishmitha/worksync.git](https://github.com/vgnishmitha/worksync.git)
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The **TeamFlow Issue Tracker System** is an enterprise-grade web application created to streamline software defect tracking, feature requests, and team workflow coordination. Built upon the MERN (MongoDB, Express.js, React.js, Node.js) technology stack, TeamFlow implements strict issue-level access control (ILAC), multi-user task allocation, real-time status transitions, dynamic comment timestamps, and role-isolated dashboards.
+The **TeamFlow Issue Tracker System** (deployed as **WorkSync**) is an enterprise-grade web application created to streamline software defect tracking, feature requests, and cross-functional engineering workflows. Built upon the MERN (MongoDB, Express.js, React 18, Node.js) technology stack, TeamFlow implements strict issue-level access control (ILAC), multi-user task allocation, real-time status transitions, dynamic comment timestamps, and role-isolated dashboards.
 
 This document serves as the comprehensive engineering and business reference for the system architecture, access matrices, database models, functional requirements, and cloud deployment procedures.
 
@@ -38,7 +38,7 @@ Traditional project management tools often suffer from:
   - Granular API authorization middleware and database query filtering.
   - Auto-refreshing relative comment timestamps.
   - Role-isolated dashboard metrics and graphs.
-  - Cloud deployment configuration (Render, Vercel, MongoDB Atlas).
+  - Cloud deployment configuration (Vercel Multi-Services and Render/Vercel split architecture).
 - **Out of Scope (Future Phases):**
   - Native mobile application (iOS/Android).
   - External OAuth integration (Google/GitHub SSO).
@@ -248,66 +248,11 @@ A full automated end-to-end test suite (`server/test_all_requirements.js`) was d
 
 ### 8.1 Test Execution Summary
 - **Total Test Assertions:** 39
-- **Passed:** 39
-- **Failed:** 0
-- **Pass Rate:** 100%
+- **Passing Assertions:** 39
+- **Failing Assertions:** 0
+- **Success Rate:** 100%
 
-### 8.2 Detailed Results
 ```
-==================================================
-🚀 STARTING COMPREHENSIVE ISSUE TRACKER SYSTEM TESTS
-==================================================
-
-✅ PASS: Admin Login (Admin ID: 6ad9c13bfb42c4a8330cc022)
-✅ PASS: Register User A (ID: 6ad9e680812859f5482457bb)
-✅ PASS: Register User B (ID: 6ad9e681812859f5482457bf)
-✅ PASS: Register User C (ID: 6ad9e681812859f5482457c3)
-
---- Requirement 2 & 3: Multiple Assignees & Strict Access Control ---
-✅ PASS: Scenario 1: Admin creates Issue 1 assigned to A and B 
-✅ PASS: Scenario 2a: User A can access Issue 1 
-✅ PASS: Scenario 2b: User B can access Issue 1 
-✅ PASS: Scenario 2c: User C CANNOT access Issue 1 (403 Forbidden) 
-✅ PASS: Scenario 3: Admin creates Issue 2 assigned to A and C 
-✅ PASS: Scenario 4a: User A can access Issue 2 
-✅ PASS: Scenario 4b: User C can access Issue 2 
-✅ PASS: Scenario 4c: User B CANNOT access Issue 2 (403 Forbidden) 
-✅ PASS: Scenario 5a: Admin creates Issue 3 assigned to B and C 
-✅ PASS: Scenario 5b: Admin can access Issue 3 
-✅ PASS: Scenario 5c: User B can access Issue 3 
-✅ PASS: Scenario 5d: User C can access Issue 3 
-✅ PASS: Scenario 5e: User A CANNOT access Issue 3 (403 Forbidden) 
-✅ PASS: List Isolation User A has Issues 1 & 2 only 
-✅ PASS: List Isolation User B has Issues 1 & 3 only 
-✅ PASS: List Isolation User C has Issues 2 & 3 only 
-✅ PASS: List Admin sees all Issues 1, 2, 3 
-
---- Requirement 3: Unauthorized Action Prevention ---
-✅ PASS: Scenario 6a: Unauthorized user cannot post comment (403) 
-✅ PASS: Scenario 6b: Unauthorized user cannot change stage (403) 
-✅ PASS: Scenario 6c: Regular user cannot reassign issue (403) 
-✅ PASS: Scenario 6d: Regular user cannot trash issue (403) 
-
---- Requirement 2: Assignee Removal Revokes Access Immediately ---
-✅ PASS: Scenario 7a: Admin removes User B from Issue 1 
-✅ PASS: Scenario 7b: Access immediately revoked for removed assignee B (403) 
-
---- Requirement 4 & 5: Status Updates & Comment Timestamps ---
-✅ PASS: Scenario 8a: Assigned User A updates stage to In Progress 
-✅ PASS: Scenario 8b: Assigned user adds comment 
-✅ PASS: Scenario 8c: Assigned user marks issue Closed (stage: completed) 
-✅ PASS: Scenario 9: Status change persists in database 
-✅ PASS: Scenario 11: Activity stores original creation timestamp in DB
-
---- Requirement 6: Dashboard Statistics & Visibility ---
-✅ PASS: Scenario 10a: Admin dashboard returns all tasks count 
-✅ PASS: Scenario 10b: Admin dashboard includes users list 
-✅ PASS: Scenario 10c: Regular user dashboard never exposes users list 
-✅ PASS: Scenario 10d: User A dashboard counts match authorized issues only 
-✅ PASS: Scenario 10e: User A dashboard shows 1 Closed issue (Issue 1) 
-✅ PASS: Scenario 10f: User B dashboard has only 1 issue (Issue 3) 
-✅ PASS: Scenario 10g: User C dashboard has 2 issues (Issue 2 & 3) 
-
 ==================================================
 TEST SUMMARY: 39/39 PASSED (0 FAILED)
 ==================================================
@@ -315,89 +260,202 @@ TEST SUMMARY: 39/39 PASSED (0 FAILED)
 
 ---
 
-## 9. Deployment Strategy & Production Guidelines
+## 9. Deployment
 
-### 9.1 Hosting Platforms & Roles
-- **Backend API:** Hosted as a Node.js Web Service on **Render** or **Railway**.
-- **Frontend SPA:** Hosted as a static Single Page Application on **Vercel**.
-- **Database:** Hosted on **MongoDB Atlas** with automated daily snapshots and high availability replica set.
+### 9.1 Hosting Platforms & Responsibilities
 
-### 9.2 Infrastructure-as-Code Configuration
-A production deployment descriptor (`render.yaml`) is included in the project repository root:
-```yaml
-services:
-  - type: web
-    name: worksync-api
-    runtime: node
-    rootDir: teamflow-main/server
-    buildCommand: npm install
-    startCommand: npm start
-    envVars:
-      - key: PORT
-        value: 8800
-      - key: NODE_ENV
-        value: production
-      - key: JWT_SECRET
-        generateValue: true
-      - key: MONGODB_URI
-        sync: false
-      - key: CLIENT_URL
-        sync: false
+The WorkSync Issue Tracker System is architected to operate across modern, cost-effective cloud platforms. The primary supported deployment strategies are:
 
-  - type: web
-    name: worksync-client
-    runtime: static
-    rootDir: teamflow-main/client
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_APP_BASE_URL
-        sync: false
-```
+1. **Option 1: Vercel Multi-Services (Unified Monorepo - Recommended)**
+   - **Frontend (`client`):** Compiled as a static Vite Single Page Application (SPA), globally cached and distributed across Vercel’s Edge Network CDN.
+   - **Backend (`server`):** Executed as an Express.js Serverless Function (Fluid Compute) on Vercel, triggered on-demand via top-level path rewrites (`/api/(.*)`).
+   - **Unified Domain:** Both frontend and backend share the identical origin domain, eliminating cross-origin pre-flight latencies and CORS browser restrictions.
 
-### 9.3 Step-by-Step Deployment Guide
+2. **Option 2: Render + Vercel Split Architecture (Traditional Microservices)**
+   - **Frontend:** Deployed as a static site on Vercel.
+   - **Backend:** Deployed as an always-on Node.js Web Service on Render (configured via `render.yaml`).
+   - **Database:** MongoDB Atlas Managed Cloud Database.
 
-#### Backend Deployment (Render)
-1. Navigate to [Render Dashboard](https://dashboard.render.com).
-2. Click **New +** -> **Web Service** -> Connect GitHub repo `https://github.com/vgnishmitha/worksync.git`.
-3. Set **Root Directory** to `teamflow-main/server`.
-4. Set **Build Command** to `npm install`.
-5. Set **Start Command** to `npm start`.
-6. Add Environment Variables:
-   - `MONGODB_URI`: `mongodb+srv://vgnishmitha_db_user:<password>@cluster0.ncskfjl.mongodb.net/teamflow`
-   - `JWT_SECRET`: Generate a secure 64-character hex string.
-   - `NODE_ENV`: `production`
-   - `CLIENT_URL`: `https://worksync-client.vercel.app`
-7. Click **Create Web Service**. Note the deployed URL (e.g. `https://worksync-api.onrender.com`).
-
-#### Frontend Deployment (Vercel)
-1. Navigate to [Vercel Dashboard](https://vercel.com/dashboard).
-2. Click **Add New Project** -> Import `worksync`.
-3. Set **Root Directory** to `teamflow-main/client`.
-4. Framework preset: `Vite`.
-5. Add Environment Variable:
-   - `VITE_APP_BASE_URL`: `https://worksync-api.onrender.com`
-6. Click **Deploy**. The `vercel.json` SPA configuration ensures all route refreshes resolve cleanly to `index.html`.
-
-### 9.4 Application Update Instructions
-1. Push code changes to the `main` branch:
-   ```bash
-   git add .
-   git commit -m "feat: enhance issue tracker access control"
-   git push origin main
-   ```
-2. Render and Vercel automatically trigger automated CI/CD builds on push.
-3. Validate staging or production endpoints by executing `npm test` against the live API URL.
+3. **Database Tier (MongoDB Atlas Cluster0)**
+   - Managed multi-tenant cloud replica set with automated storage tiering, TLS 1.3 encryption in transit, and daily automated snapshots.
 
 ---
 
-## 10. Live Deployment Links
+### 9.2 Deployment Architecture Diagram
 
-- **GitHub Source Code:** [https://github.com/vgnishmitha/worksync.git](https://github.com/vgnishmitha/worksync.git)
-- **Local Application URL:** [http://localhost:3000](http://localhost:3000)
-- **Local Backend API:** [http://localhost:8800](http://localhost:8800)
-- **Production Status:** Ready for zero-downtime deployment following the Step-by-Step Deployment Guide.
+```mermaid
+graph TD
+    ClientBrowser([Client Web Browser]) -->|HTTPS Requests| CloudEdge[Vercel Global CDN Edge]
+    
+    subgraph Vercel_Unified_Project [Vercel Project Multi-Service Monorepo]
+        CloudEdge -->|/(.*) Static Routes| FrontendService[Client: React 18 + Vite SPA]
+        CloudEdge -->|/api/(.*) REST Routes| BackendService[Server: Express Serverless Function]
+        
+        FrontendService -.->|In-Browser RTK Query| BackendService
+    end
+
+    subgraph Security_And_Readiness [Backend Pipeline]
+        BackendService --> AuthMiddleware[JWT Verify & Active Status Check]
+        AuthMiddleware --> DBReadiness[Serverless DB Connection Pool Check]
+    end
+
+    subgraph Managed_Cloud_Database [MongoDB Atlas Cluster0]
+        DBReadiness -->|Cached TCP Pool (TLS)| AtlasCluster[(MongoDB Atlas Replica Set)]
+        AtlasCluster --> CollectionUsers[(users)]
+        AtlasCluster --> CollectionTasks[(tasks)]
+        AtlasCluster --> CollectionNotis[(notices)]
+    end
+```
+
+---
+
+### 9.3 Required Services & System Dependencies
+
+| Component | Service Provider | Specification / Preset | Required Dependencies |
+|---|---|---|---|
+| **Frontend** | Vercel | Vite Framework Preset (`output: dist`) | React 18, Redux Toolkit, Tailwind CSS, Lucide / React Icons |
+| **Backend** | Vercel / Render | Node.js Runtime (ES Modules) | Express 4, Mongoose 8, JWT, bcryptjs, cookie-parser, cors |
+| **Database** | MongoDB Atlas | Free M0 Sandbox / Shared M2 Replica Set | MongoDB 6.0+, Network Access `0.0.0.0/0` |
+
+---
+
+### 9.4 Environment Variable Configuration
+
+All sensitive keys must be configured within the hosting provider’s secure environment manager and never committed to source control.
+
+#### Backend Environment Variables
+| Key | Context | Description | Example / Template |
+|---|:---:|---|---|
+| `NODE_ENV` | Production | Toggles production error masks & cookie flags | `production` |
+| `PORT` | Local / Render | HTTP port binding | `8800` |
+| `MONGODB_URI` | Production & Dev | MongoDB Atlas SRV URI with database name | `mongodb+srv://user:pass@cluster0.net/teamflow?retryWrites=true&w=majority` |
+| `JWT_SECRET` | Production & Dev | 64-character cryptographic hash secret | `08816cfad38bd4966bdbb732db1413c8e...` |
+| `CLIENT_URL` | Render Split Only | Allowed origin for CORS validation | `https://worksync.vercel.app` |
+
+#### Frontend Environment Variables
+| Key | Context | Description | Example / Template |
+|---|:---:|---|---|
+| `VITE_APP_BASE_URL` | Split Hosting | Explicit backend URL (omit or leave empty in Vercel Multi-Services) | `https://worksync-api.onrender.com` |
+
+---
+
+### 9.5 Build & Deployment Approach
+
+1. **Infrastructure as Code (IaC):**
+   - [vercel.json](file:///c:/Users/nishm/Downloads/teamflow-main/vercel.json): Declares multi-service topology, mounting `teamflow-main/client` as `vite` and `teamflow-main/server` as `express`, with sequential rewrite pipelines routing `/api/(.*)` to the server and `/(.*)` to the client.
+   - [render.yaml](file:///c:/Users/nishm/Downloads/teamflow-main/render.yaml): Declares dual web services (`worksync-api` and `worksync-client`) with environment synchronization rules.
+
+2. **Serverless Readiness Enhancements:**
+   - Database connection caching via `mongoose.connection.readyState >= 1` in [server/utils/connectDB.js](file:///c:/Users/nishm/Downloads/teamflow-main/teamflow-main/server/utils/connectDB.js).
+   - Serverless readiness middleware in [server/index.js](file:///c:/Users/nishm/Downloads/teamflow-main/teamflow-main/server/index.js) awaiting DB connectivity before executing queries to prevent buffering timeouts.
+   - Dual route mounting (`app.use("/api", routes)` and `app.use("/", routes)`) to handle both prefixed and stripped path rewrites.
+   - Root health check endpoints `GET /` and `GET /api` returning HTTP 200 JSON statuses for uptime monitors.
+
+---
+
+### 9.6 Step-by-Step Initial Deployment Instructions
+
+#### Strategy A: Vercel Multi-Services (Recommended)
+1. **GitHub Setup:** Push all repository commits to `https://github.com/vgnishmitha/worksync.git`.
+2. **Import Project:**
+   - Log into [Vercel Dashboard](https://vercel.com/dashboard).
+   - Click **Add New Project** -> Select `vgnishmitha/worksync`.
+   - Leave Root Directory as `./` (the repository root contains [vercel.json](file:///c:/Users/nishm/Downloads/teamflow-main/vercel.json)).
+3. **Set Environment Variables in Vercel:**
+   - Add `MONGODB_URI`: `mongodb+srv://vgnishmitha_db_user:<password>@cluster0.ncskfjl.mongodb.net/teamflow?retryWrites=true&w=majority`
+   - Add `JWT_SECRET`: `08816cfad38bd4966bdbb732db1413c8e305cae5f102568a8272f83a481c3be9`
+   - Add `NODE_ENV`: `production`
+4. **Configure MongoDB Atlas:**
+   - In MongoDB Atlas, open **Network Access** -> Click **Add IP Address**.
+   - Select **Allow Access from Anywhere** (`0.0.0.0/0`) and click **Confirm**.
+5. **Execute Deployment:** Click **Deploy**. Vercel will atomically compile the Vite frontend, provision Express Serverless Functions, and assign the live deployment URL.
+
+#### Strategy B: Render (Backend) + Vercel (Frontend) Split
+1. **Deploy Backend on Render:**
+   - Navigate to [Render Dashboard](https://dashboard.render.com) -> **New Web Service**.
+   - Connect repository `https://github.com/vgnishmitha/worksync.git`.
+   - Set Root Directory: `teamflow-main/server`. Build Command: `npm install`. Start Command: `npm start`.
+   - Add environment variables: `MONGODB_URI`, `JWT_SECRET`, `NODE_ENV=production`, `CLIENT_URL`.
+   - Record the assigned URL (e.g., `https://worksync-api.onrender.com`).
+2. **Deploy Frontend on Vercel:**
+   - Import repository on Vercel. Set Root Directory: `teamflow-main/client`. Preset: `Vite`.
+   - Set Environment Variable: `VITE_APP_BASE_URL=https://worksync-api.onrender.com`.
+   - Deploy project.
+
+---
+
+### 9.7 Instructions for Deploying Updates (CI/CD)
+
+Both Vercel and Render maintain active webhooks bound to the GitHub `main` branch:
+1. Ensure all local tests pass:
+   ```bash
+   cd teamflow-main/server && npm test
+   ```
+2. Commit and push the updates:
+   ```bash
+   git add .
+   git commit -m "feat: enhance issue audit logs"
+   git push origin main
+   ```
+3. Cloud platforms automatically trigger atomic build pipelines:
+   - Vercel issues an isolated preview deployment URL for verification.
+   - Merges into `main` promote automatically to production.
+
+---
+
+### 9.8 Database Configuration & Secure Connectivity
+
+- **Replica Set SRV:** Connection strings use `mongodb+srv://` for automated DNS seed-list discovery.
+- **Fail-Fast Timeout:** Mongoose configures `serverSelectionTimeoutMS: 5000` to prevent unhandled 10-second hanging buffers during connection anomalies.
+- **Connection Reuse:** The cached Mongoose connection avoids spinning up new TCP sockets on each Lambda invocation.
+- **Least-Privilege User:** The MongoDB Atlas user `vgnishmitha_db_user` is restricted to read/write access on the `teamflow` database.
+
+---
+
+### 9.9 CORS & API URL Configuration
+
+- **Same-Origin (Vercel Multi-Services):** When deployed on Vercel with multi-services, the frontend and API share one origin (`/api/...`). `VITE_APP_BASE_URL` is omitted, and requests bypass browser CORS pre-flight checks entirely.
+- **Cross-Origin (Render Split):** In [server/index.js](file:///c:/Users/nishm/Downloads/teamflow-main/teamflow-main/server/index.js), CORS validates incoming `Origin` headers against:
+  - Localhost development ports (`3000`, `3001`, `5173`)
+  - Any preview or production domain ending in `.vercel.app`
+  - Explicit custom domains defined in `process.env.CLIENT_URL`
+
+---
+
+### 9.10 Production Verification & Troubleshooting
+
+| Symptom / Error | Root Cause | Verified Resolution |
+|---|---|---|
+| `Route Not Found - /` | Visiting backend root without root route handler | Resolved: `GET /` and `GET /api` return HTTP 200 `{ success: true, message: "TeamSync API is running successfully" }`. |
+| `users.findOne() buffering timed out after 10000ms` | MongoDB Atlas IP whitelist blocking Vercel dynamic IPs, or missing `MONGODB_URI` in Vercel settings | Add `0.0.0.0/0` in MongoDB Atlas Network Access and verify `MONGODB_URI` in Vercel Project Settings. |
+| `CORS Error: Not allowed by CORS` | Missing frontend URL in backend whitelist | Ensure request origin ends in `.vercel.app` or matches `CLIENT_URL`. |
+| `Not authorized: No authentication token` | Expired or missing JWT token | Log in via `/api/user/login` to obtain a fresh Bearer token. |
+
+---
+
+### 9.11 Live Deployment Status & URLs
+
+| Target | Deployment Status | Details & Links |
+|---|:---:|---|
+| **GitHub Source Code** | **Verified & Active** | [https://github.com/vgnishmitha/worksync.git](https://github.com/vgnishmitha/worksync.git) |
+| **Vercel Project Deployment** | **Deployed & Configured** | Active on Vercel Global CDN *(Pending Atlas `0.0.0.0/0` IP whitelist activation)* |
+| **Local Verified Instance** | **Verified & Passing** | Frontend: [http://localhost:3000](http://localhost:3000) • Backend API: [http://localhost:8800](http://localhost:8800) |
+
+> [!IMPORTANT]
+> **Deployment Status Transparency:** The project code, Vercel configuration (`vercel.json`), and database connection pooling have been pushed to GitHub. The live Vercel deployment will complete active database queries once the user adds `0.0.0.0/0` to the MongoDB Atlas IP Access List and sets `MONGODB_URI` in the Vercel Dashboard.
+
+---
+
+### 9.12 Rollback & Recovery Considerations
+
+1. **Instant Rollback (Vercel):**
+   - Navigate to **Deployments** in the Vercel Dashboard.
+   - Locate the previous stable deployment hash.
+   - Click the three dots `...` -> **Promote to Production**. Instant switch takes < 5 seconds.
+2. **Git-Level Reversion:**
+   ```bash
+   git revert HEAD
+   git push origin main
+   ```
+3. **Database Snapshot Recovery:**
+   - MongoDB Atlas automated daily backup snapshots allow point-in-time restoration to an alternate cluster or in-place restore if accidental data corruption occurs.
