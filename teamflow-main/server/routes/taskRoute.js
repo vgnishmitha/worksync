@@ -33,7 +33,7 @@ router.put(
   protectRoute,
   updateSubTaskStage
 );
-router.put("/:id", protectRoute, trashTask);
+router.put("/:id", protectRoute, isAdminRoute, trashTask);
 
 router.delete(
   "/delete-restore/:id?",

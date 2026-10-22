@@ -3,6 +3,9 @@ import User from "../models/userModel.js";
 
 const dbConnection = async () => {
   try {
+    if (mongoose.connection.readyState >= 1) {
+      return;
+    }
     await mongoose.connect(process.env.MONGODB_URI);
 
     console.log("Database Connected");

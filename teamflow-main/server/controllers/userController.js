@@ -1,5 +1,7 @@
 import asyncHandler from "express-async-handler";
+import jwt from "jsonwebtoken";
 import Notice from "../models/notis.js";
+import Task from "../models/taskModel.js";
 import User from "../models/userModel.js";
 import createJWT from "../utils/index.js";
 
@@ -52,22 +54,51 @@ const registerUser = asyncHandler(async (req, res) => {
       .json({ status: false, message: "Email address already exists" });
   }
 
+  // Detect if an active admin user is making this request (e.g. from Team management)
+  let callerIsAdmin = false;
+  let tokenInRequest = null;
+  if (
+    req.headers?.authorization &&
+    req.headers.authorization.startsWith("Bearer ")
+  ) {
+    tokenInRequest = req.headers.authorization.split(" ")[1];
+  } else if (req.cookies?.token) {
+    tokenInRequest = req.cookies.token;
+  }
+
+  if (tokenInRequest) {
+    try {
+      const decoded = jwt.verify(tokenInRequest, process.env.JWT_SECRET);
+      const callerUser = await User.findById(decoded.userId).select("isAdmin");
+      if (callerUser?.isAdmin) {
+        callerIsAdmin = true;
+      }
+    } catch (e) {
+      // not authenticated as admin
+    }
+  }
+
+  const isFirstUser = (await User.countDocuments({})) === 0;
+  const userIsAdmin = callerIsAdmin ? Boolean(isAdmin) : isFirstUser;
+
   const user = await User.create({
     name,
     email,
     password,
-    isAdmin,
-    role,
-    title,
+    isAdmin: userIsAdmin,
+    role: role || "User",
+    title: title || "Member",
   });
 
   if (user) {
-    const token = isAdmin ? createJWT(res, user._id) : null;
-
     user.password = undefined;
-
     const userObj = user.toObject ? user.toObject() : { ...user };
-    if (token) userObj.token = token;
+
+    // If this is a self-registration, log them in immediately
+    if (!callerIsAdmin) {
+      const token = createJWT(res, user._id);
+      userObj.token = token;
+    }
 
     res.status(201).json(userObj);
   } else {
@@ -139,11 +170,23 @@ const getNotificationsList = asyncHandler(async (req, res) => {
 
 // @GET  - get user task status
 const getUserTaskStatus = asyncHandler(async (req, res) => {
-  const tasks = await User.find()
-    .populate("tasks", "title stage")
+  const users = await User.find()
+    .select("name title role email isActive createdAt")
     .sort({ _id: -1 });
 
-  res.status(200).json(tasks);
+  const tasks = await Task.find({ isTrashed: false }).select(
+    "title stage team priority"
+  );
+
+  const userListWithTasks = users.map((u) => {
+    const userObj = u.toObject();
+    userObj.tasks = tasks.filter((t) =>
+      t.team?.some((m) => m.toString() === u._id.toString())
+    );
+    return userObj;
+  });
+
+  res.status(200).json(userListWithTasks);
 });
 
 // @GET  - get user notifications

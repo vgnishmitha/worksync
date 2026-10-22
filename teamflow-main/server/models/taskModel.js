@@ -3,7 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const taskSchema = new Schema(
   {
     title: { type: String, required: true },
-    date: { type: Date, default: new Date() },
+    date: { type: Date, default: Date.now },
     priority: {
       type: String,
       default: "normal",
@@ -12,7 +12,7 @@ const taskSchema = new Schema(
     stage: {
       type: String,
       default: "todo",
-      enum: ["todo", "in progress", "completed"],
+      enum: ["todo", "open", "in progress", "completed", "closed"],
     },
     activities: [
       {
@@ -25,27 +25,28 @@ const taskSchema = new Schema(
             "in progress",
             "bug",
             "completed",
+            "closed",
             "commented",
           ],
         },
         activity: String,
-        date: { type: Date, default: new Date() },
+        date: { type: Date, default: Date.now },
         by: { type: Schema.Types.ObjectId, ref: "User" },
       },
     ],
     subTasks: [
       {
         title: String,
-        date: Date,
+        date: { type: Date, default: Date.now },
         tag: String,
-        isCompleted: Boolean,
+        isCompleted: { type: Boolean, default: false },
       },
     ],
     description: String,
     assets: [String],
     links: [String],
-    team: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    isTrashed: { type: Boolean, default: false },
+    team: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
+    isTrashed: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }
 );

@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { Button, Loading, Table, Tabs, Title } from "../components";
 import { AddTask, BoardView, TaskTitle } from "../components/tasks";
 import { useGetAllTaskQuery } from "../redux/slices/api/taskApiSlice";
-import { TASK_TYPE } from "../utils";
+import { TASK_TYPE, getStageLabel } from "../utils";
 import { useSelector } from "react-redux";
 
 const TABS = [
@@ -18,15 +18,16 @@ const Tasks = () => {
   const params = useParams();
   const { user } = useSelector((state) => state.auth);
   const [searchParams] = useSearchParams();
-  const [searchTerm] = useState(searchParams.get("search") || "");
+  const searchTerm = searchParams.get("search") || "";
 
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(false);
 
-  const status = params?.status || "";
+  const rawStatus = params?.status || "";
+  const displayStatus = rawStatus ? getStageLabel(rawStatus) : "";
 
   const { data, isLoading, refetch } = useGetAllTaskQuery({
-    strQuery: status,
+    strQuery: rawStatus,
     isTrashed: "",
     search: searchTerm,
   });
@@ -34,22 +35,30 @@ const Tasks = () => {
   useEffect(() => {
     refetch();
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
-  }, [open]);
+  }, [open, searchTerm, rawStatus, refetch]);
 
   return isLoading ? (
-    <div className='py-10'>
+    <div className='py-10 flex justify-center'>
       <Loading />
     </div>
   ) : (
     <div className='w-full'>
       <div className='flex items-center justify-between mb-4'>
-        <Title title={status ? `${status} Tasks` : "Tasks"} />
+        <Title
+          title={
+            displayStatus
+              ? `${displayStatus} Issues`
+              : user?.isAdmin
+              ? "All Issues"
+              : "My Assigned Issues"
+          }
+        />
 
-        {!status && user?.isAdmin && (
+        {user?.isAdmin && (
           <Button
-            label='Create Task'
+            label='Create Issue'
             icon={<IoMdAdd className='text-lg' />}
-            className='flex flex-row-reverse gap-1 items-center bg-blue-600 text-white rounded-md py-2 2xl:py-2.5'
+            className='flex flex-row-reverse gap-1 items-center bg-blue-600 hover:bg-blue-700 text-white rounded-md py-2 px-4 font-semibold text-sm'
             onClick={() => setOpen(true)}
           />
         )}
@@ -57,14 +66,14 @@ const Tasks = () => {
 
       <div>
         <Tabs tabs={TABS} setSelected={setSelected}>
-          {!status && (
+          {!rawStatus && (
             <div className='w-full flex justify-between gap-4 md:gap-x-12 py-4'>
-              <TaskTitle label='To Do' className={TASK_TYPE.todo} />
+              <TaskTitle label='Open' className={TASK_TYPE.open} />
               <TaskTitle
                 label='In Progress'
                 className={TASK_TYPE["in progress"]}
               />
-              <TaskTitle label='Completed' className={TASK_TYPE.completed} />
+              <TaskTitle label='Closed' className={TASK_TYPE.closed} />
             </div>
           )}
 

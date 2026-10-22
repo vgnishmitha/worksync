@@ -56,8 +56,59 @@ export const PRIOTITYSTYELS = {
 
 export const TASK_TYPE = {
   todo: "bg-blue-600",
+  open: "bg-blue-600",
   "in progress": "bg-yellow-600",
   completed: "bg-green-600",
+  closed: "bg-green-600",
+};
+
+export const getStageLabel = (stage) => {
+  const s = (stage || "").toLowerCase();
+  if (s === "completed" || s === "closed") return "Closed";
+  if (s === "in progress") return "In Progress";
+  return "Open";
+};
+
+export const getRelativeTime = (dateInput) => {
+  if (!dateInput) return "";
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return "";
+
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  // If newly created or within 45 seconds
+  if (diffInSeconds < 45 && diffInSeconds >= 0) {
+    return "Just now";
+  }
+
+  // Handle minor client clock skew
+  if (diffInSeconds < 0 && diffInSeconds > -10) {
+    return "Just now";
+  }
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} ${diffInMinutes === 1 ? "minute" : "minutes"} ago`;
+  }
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours} ${diffInHours === 1 ? "hour" : "hours"} ago`;
+  }
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) {
+    return `${diffInDays} ${diffInDays === 1 ? "day" : "days"} ago`;
+  }
+
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) {
+    return `${diffInMonths} ${diffInMonths === 1 ? "month" : "months"} ago`;
+  }
+
+  const diffInYears = Math.floor(diffInDays / 365);
+  return `${diffInYears} ${diffInYears === 1 ? "year" : "years"} ago`;
 };
 
 export const BGS = [
@@ -79,18 +130,13 @@ export function countTasksByStage(tasks) {
   let completedCount = 0;
 
   tasks?.forEach((task) => {
-    switch (task.stage.toLowerCase()) {
-      case "in progress":
-        inProgressCount++;
-        break;
-      case "todo":
-        todoCount++;
-        break;
-      case "completed":
-        completedCount++;
-        break;
-      default:
-        break;
+    const s = (task?.stage || "").toLowerCase();
+    if (s === "in progress") {
+      inProgressCount++;
+    } else if (s === "todo" || s === "open") {
+      todoCount++;
+    } else if (s === "completed" || s === "closed") {
+      completedCount++;
     }
   });
 

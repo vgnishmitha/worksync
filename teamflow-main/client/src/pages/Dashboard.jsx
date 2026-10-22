@@ -36,14 +36,15 @@ const Card = ({ label, count, bg, icon }) => {
 };
 
 const Dashboard = () => {
-  const { data, isLoading, error } = useGetDasboardStatsQuery();
+  const { data, isLoading, error, refetch } = useGetDasboardStatsQuery();
   const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
+    refetch();
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
-  }, []);
+  }, [refetch]);
 
-  const totals = data?.tasks || [];
+  const totals = data?.tasks || {};
 
   if (isLoading)
     return (
@@ -55,38 +56,38 @@ const Dashboard = () => {
   const stats = [
     {
       _id: "1",
-      label: "TOTAL TASK",
+      label: "TOTAL ISSUES",
       total: data?.totalTasks || 0,
       icon: <FaNewspaper />,
       bg: "bg-[#1d4ed8]",
     },
     {
       _id: "2",
-      label: "COMPLTED TASK",
-      total: totals["completed"] || 0,
-      icon: <MdAdminPanelSettings />,
-      bg: "bg-[#0f766e]",
+      label: "OPEN ISSUES",
+      total: totals["open"] || totals["todo"] || 0,
+      icon: <FaArrowsToDot />,
+      bg: "bg-[#be185d]",
     },
     {
       _id: "3",
-      label: "TASK IN PROGRESS ",
+      label: "IN PROGRESS",
       total: totals["in progress"] || 0,
       icon: <LuClipboardEdit />,
       bg: "bg-[#f59e0b]",
     },
     {
       _id: "4",
-      label: "TODOS",
-      total: totals["todo"],
-      icon: <FaArrowsToDot />,
-      bg: "bg-[#be185d]" || 0,
+      label: "CLOSED ISSUES",
+      total: totals["closed"] || totals["completed"] || 0,
+      icon: <MdAdminPanelSettings />,
+      bg: "bg-[#0f766e]",
     },
   ];
 
   return (
     <div className='h-full py-4'>
       <>
-        <div className='grid grid-cols-1 md:grid-cols-4 gap-2'>
+        <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
           {stats?.map(({ icon, bg, label, total }, index) => (
             <Card key={index} icon={icon} bg={bg} label={label} count={total} />
           ))}
@@ -99,9 +100,9 @@ const Dashboard = () => {
           <Chart data={data?.graphData} />
         </div>
         <div className='w-full flex flex-col md:flex-row gap-4 2xl:gap-10 py-8'>
-          {/* RECENT AUTHORS */}
+          {/* RECENT ISSUES */}
           {data && <TaskTable tasks={data?.last10Task} />}
-          {/* RECENT USERS */}
+          {/* RECENT USERS (ADMIN ONLY) */}
           {data && user?.isAdmin && <UserTable users={data?.users} />}
         </div>
       </>

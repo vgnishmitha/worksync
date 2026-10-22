@@ -9,6 +9,7 @@ export const postApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: ["Task", "Dashboard"],
     }),
 
     duplicateTask: builder.mutation({
@@ -17,6 +18,7 @@ export const postApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body: {},
       }),
+      invalidatesTags: ["Task", "Dashboard"],
     }),
 
     updateTask: builder.mutation({
@@ -25,6 +27,11 @@ export const postApiSlice = apiSlice.injectEndpoints({
         method: "PUT",
         body: data,
       }),
+      invalidatesTags: (result, error, data) => [
+        "Task",
+        "Dashboard",
+        { type: "Task", id: data._id },
+      ],
     }),
 
     getAllTask: builder.query({
@@ -32,6 +39,7 @@ export const postApiSlice = apiSlice.injectEndpoints({
         url: `${TASKS_URL}?stage=${strQuery}&isTrashed=${isTrashed}&search=${search}`,
         method: "GET",
       }),
+      providesTags: ["Task"],
     }),
 
     getSingleTask: builder.query({
@@ -39,6 +47,7 @@ export const postApiSlice = apiSlice.injectEndpoints({
         url: `${TASKS_URL}/${id}`,
         method: "GET",
       }),
+      providesTags: (result, error, id) => [{ type: "Task", id }],
     }),
 
     createSubTask: builder.mutation({
@@ -47,6 +56,10 @@ export const postApiSlice = apiSlice.injectEndpoints({
         method: "PUT",
         body: data,
       }),
+      invalidatesTags: (result, error, { id }) => [
+        "Task",
+        { type: "Task", id },
+      ],
     }),
 
     postTaskActivity: builder.mutation({
@@ -55,6 +68,11 @@ export const postApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: (result, error, { id }) => [
+        "Task",
+        "Dashboard",
+        { type: "Task", id },
+      ],
     }),
 
     trashTast: builder.mutation({
@@ -62,6 +80,7 @@ export const postApiSlice = apiSlice.injectEndpoints({
         url: `${TASKS_URL}/${id}`,
         method: "PUT",
       }),
+      invalidatesTags: ["Task", "Dashboard"],
     }),
 
     deleteRestoreTast: builder.mutation({
@@ -69,6 +88,7 @@ export const postApiSlice = apiSlice.injectEndpoints({
         url: `${TASKS_URL}/delete-restore/${id}?actionType=${actionType}`,
         method: "DELETE",
       }),
+      invalidatesTags: ["Task", "Dashboard"],
     }),
 
     getDasboardStats: builder.query({
@@ -76,6 +96,7 @@ export const postApiSlice = apiSlice.injectEndpoints({
         url: `${TASKS_URL}/dashboard`,
         method: "GET",
       }),
+      providesTags: ["Dashboard"],
     }),
 
     changeTaskStage: builder.mutation({
@@ -84,6 +105,11 @@ export const postApiSlice = apiSlice.injectEndpoints({
         method: "PUT",
         body: data,
       }),
+      invalidatesTags: (result, error, data) => [
+        "Task",
+        "Dashboard",
+        { type: "Task", id: data?.id },
+      ],
     }),
 
     changeSubTaskStatus: builder.mutation({
@@ -92,6 +118,10 @@ export const postApiSlice = apiSlice.injectEndpoints({
         method: "PUT",
         body: data,
       }),
+      invalidatesTags: (result, error, data) => [
+        "Task",
+        { type: "Task", id: data?.id },
+      ],
     }),
   }),
 });

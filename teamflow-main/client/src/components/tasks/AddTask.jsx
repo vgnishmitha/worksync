@@ -12,11 +12,12 @@ import { dateFormatter } from "../../utils";
 import Button from "../Button";
 import Loading from "../Loading";
 import ModalWrapper from "../ModalWrapper";
+import { useEffect } from "react";
 import SelectList from "../SelectList";
 import Textbox from "../Textbox";
 import UserList from "./UsersSelect";
 
-const LISTS = ["TODO", "IN PROGRESS", "COMPLETED"];
+const LISTS = ["OPEN", "IN PROGRESS", "CLOSED"];
 const PRIORIRY = ["HIGH", "MEDIUM", "NORMAL", "LOW"];
 
 const AddTask = ({ open, setOpen, task }) => {
@@ -27,45 +28,76 @@ const AddTask = ({ open, setOpen, task }) => {
     stage: "",
     priority: "",
     assets: [],
-    description: "",
-    links: "",
+    description: task?.description || "",
+    links: Array.isArray(task?.links) ? task.links.join(",") : task?.links || "",
   };
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm({ defaultValues });
 
-  const [stage, setStage] = useState(task?.stage?.toUpperCase() || LISTS[0]);
-  const [team, setTeam] = useState(task?.team || []);
-  const [priority, setPriority] = useState(
-    task?.priority?.toUpperCase() || PRIORIRY[2]
-  );
-  
+  const [stage, setStage] = useState("OPEN");
+  const [team, setTeam] = useState([]);
+  const [priority, setPriority] = useState(PRIORIRY[2]);
+
   const [createTask, { isLoading }] = useCreateTaskMutation();
   const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
-  
+
+  useEffect(() => {
+    if (task) {
+      const s = (task?.stage || "").toLowerCase();
+      const currentStageLabel =
+        s === "completed" || s === "closed"
+          ? "CLOSED"
+          : s === "in progress"
+          ? "IN PROGRESS"
+          : "OPEN";
+
+      setStage(currentStageLabel);
+      setPriority(task?.priority?.toUpperCase() || PRIORIRY[2]);
+      setTeam(task?.team || []);
+      reset({
+        title: task?.title || "",
+        date: dateFormatter(task?.date || new Date()),
+        description: task?.description || "",
+        links: Array.isArray(task?.links) ? task.links.join(",") : task?.links || "",
+      });
+    } else {
+      setStage("OPEN");
+      setPriority(PRIORIRY[2]);
+      setTeam([]);
+      reset({
+        title: "",
+        date: dateFormatter(new Date()),
+        description: "",
+        links: "",
+      });
+    }
+  }, [task, open, reset]);
+
   const handleOnSubmit = async (data) => {
     try {
+      const normalizedStage =
+        stage === "OPEN" ? "todo" : stage === "CLOSED" ? "completed" : "in progress";
+
       const newData = {
         ...data,
         team,
-        stage,
-        priority,
+        stage: normalizedStage,
+        priority: priority.toLowerCase(),
       };
-      
+
       const res = task?._id
         ? await updateTask({ ...newData, _id: task._id }).unwrap()
         : await createTask(newData).unwrap();
 
       toast.success(res.message);
-
-      setTimeout(() => {
-        setOpen(false);
-      }, 500);
+      setOpen(false);
     } catch (err) {
-      console.log(err);
-      toast.error(err?.data?.message || err.error);
+      console.error(err);
+      toast.error(err?.data?.message || err.error || "Failed to save issue.");
     }
   };
 

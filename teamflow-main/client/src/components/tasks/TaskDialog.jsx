@@ -34,31 +34,34 @@ const CustomTransition = ({ children }) => (
   </Transition>
 );
 
-const ChangeTaskActions = ({ _id, stage }) => {
+const ChangeTaskActions = ({ _id, stage, id }) => {
   const [changeStage] = useChangeTaskStageMutation();
+  const taskId = _id || id;
 
   const changeHanlder = async (val) => {
     try {
       const data = {
-        id: _id,
+        id: taskId,
         stage: val,
       };
       const res = await changeStage(data).unwrap();
-
-      toast.success(res?.message);
-
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      toast.success(res?.message || "Status changed successfully.");
     } catch (err) {
-      console.log(err);
-      toast.error(err?.data?.message || err.error);
+      console.error(err);
+      toast.error(err?.data?.message || err.error || "Failed to update status.");
     }
+  };
+
+  const normStage = (stage || "").toLowerCase();
+  const isStageActive = (stKey) => {
+    if (stKey === "todo") return normStage === "todo" || normStage === "open";
+    if (stKey === "completed") return normStage === "completed" || normStage === "closed";
+    return normStage === stKey;
   };
 
   const items = [
     {
-      label: "To-Do",
+      label: "Open",
       stage: "todo",
       icon: <TaskColor className='bg-blue-600' />,
       onClick: () => changeHanlder("todo"),
@@ -70,7 +73,7 @@ const ChangeTaskActions = ({ _id, stage }) => {
       onClick: () => changeHanlder("in progress"),
     },
     {
-      label: "Completed",
+      label: "Closed",
       stage: "completed",
       icon: <TaskColor className='bg-green-600' />,
       onClick: () => changeHanlder("completed"),
@@ -79,36 +82,40 @@ const ChangeTaskActions = ({ _id, stage }) => {
 
   return (
     <>
-      <Menu as='div' className='relative inline-block text-left'>
+      <Menu as='div' className='relative inline-block text-left w-full'>
         <Menu.Button
           className={clsx(
-            "inline-flex w-full items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300"
+            "inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300"
           )}
         >
           <FaExchangeAlt />
-          <span>Change Task</span>
+          <span>Change Status</span>
         </Menu.Button>
 
         <CustomTransition>
-          <Menu.Items className='absolute p-4 left-0 mt-2 w-40 divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none'>
-            <div className='px-1 py-1 space-y-2'>
-              {items.map((el) => (
-                <Menu.Item key={el.label} disabled={stage === el.stage}>
-                  {({ active }) => (
-                    <button
-                      disabled={stage === el.stage}
-                      onClick={el?.onClick}
-                      className={clsx(
-                        active ? "bg-gray-200 text-gray-900" : "text-gray-900",
-                        "group flex gap-2 w-full items-center rounded-md px-2 py-2 text-sm disabled:opacity-50"
-                      )}
-                    >
-                      {el.icon}
-                      {el.label}
-                    </button>
-                  )}
-                </Menu.Item>
-              ))}
+          <Menu.Items className='absolute p-2 left-0 mt-1 w-44 divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-50'>
+            <div className='px-1 py-1 space-y-1'>
+              {items.map((el) => {
+                const activeStage = isStageActive(el.stage);
+                return (
+                  <Menu.Item key={el.label} disabled={activeStage}>
+                    {({ active }) => (
+                      <button
+                        disabled={activeStage}
+                        onClick={el?.onClick}
+                        className={clsx(
+                          active ? "bg-gray-100 text-gray-900" : "text-gray-900",
+                          "group flex gap-2 w-full items-center rounded-md px-2 py-1.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        )}
+                      >
+                        {el.icon}
+                        <span>{el.label}</span>
+                        {activeStage && <span className='ml-auto text-xs text-gray-400 font-semibold'>(Current)</span>}
+                      </button>
+                    )}
+                  </Menu.Item>
+                );
+              })}
             </div>
           </Menu.Items>
         </CustomTransition>
@@ -190,6 +197,11 @@ export default function TaskDialog({ task }) {
     },
   ];
 
+  const isAssignee = task?.team?.some(
+    (member) => (member?._id || member)?.toString() === user?._id?.toString()
+  );
+  const canChangeStage = user?.isAdmin || isAssignee;
+
   return (
     <>
       <div className=''>
@@ -199,51 +211,56 @@ export default function TaskDialog({ task }) {
           </Menu.Button>
 
           <CustomTransition>
-            <Menu.Items className='absolute p-4 right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none'>
+            <Menu.Items className='absolute p-4 right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-50'>
               <div className='px-1 py-1 space-y-2'>
-                {items.map((el, index) => (
-                  <Menu.Item key={el.label}>
+                {items.map((el, index) => {
+                  if (index > 0 && !user?.isAdmin) return null;
+                  return (
+                    <Menu.Item key={el.label}>
+                      {({ active }) => (
+                        <button
+                          onClick={el?.onClick}
+                          className={`${
+                            active ? "bg-blue-500 text-white" : "text-gray-900"
+                          } group flex w-full items-center rounded-md px-2 py-2 text-sm disabled:text-gray-400`}
+                        >
+                          {el.icon}
+                          {el.label}
+                        </button>
+                      )}
+                    </Menu.Item>
+                  );
+                })}
+              </div>
+
+              {canChangeStage && (
+                <div className='px-1 py-1'>
+                  <Menu.Item>
+                    <ChangeTaskActions id={task._id} {...task} />
+                  </Menu.Item>
+                </div>
+              )}
+
+              {user?.isAdmin && (
+                <div className='px-1 py-1'>
+                  <Menu.Item>
                     {({ active }) => (
                       <button
-                        disabled={index === 0 ? false : !user.isAdmin}
-                        onClick={el?.onClick}
+                        onClick={() => deleteClicks()}
                         className={`${
-                          active ? "bg-blue-500 text-white" : "text-gray-900"
-                        } group flex w-full items-center rounded-md px-2 py-2 text-sm disabled:text-gray-400`}
+                          active ? "bg-red-100 text-red-900" : "text-red-900"
+                        } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                       >
-                        {el.icon}
-                        {el.label}
+                        <RiDeleteBin6Line
+                          className='mr-2 h-5 w-5 text-red-600'
+                          aria-hidden='true'
+                        />
+                        Delete
                       </button>
                     )}
                   </Menu.Item>
-                ))}
-              </div>
-
-              <div className='px-1 py-1'>
-                <Menu.Item>
-                  <ChangeTaskActions id={task._id} {...task} />
-                </Menu.Item>
-              </div>
-
-              <div className='px-1 py-1'>
-                <Menu.Item>
-                  {({ active }) => (
-                    <button
-                      disabled={!user.isAdmin}
-                      onClick={() => deleteClicks()}
-                      className={`${
-                        active ? "bg-red-100 text-red-900" : "text-red-900"
-                      } group flex w-full items-center rounded-md px-2 py-2 text-sm disabled:text-gray-400`}
-                    >
-                      <RiDeleteBin6Line
-                        className='mr-2 h-5 w-5 text-red-600'
-                        aria-hidden='true'
-                      />
-                      Delete
-                    </button>
-                  )}
-                </Menu.Item>
-              </div>
+                </div>
+              )}
             </Menu.Items>
           </CustomTransition>
         </Menu>
